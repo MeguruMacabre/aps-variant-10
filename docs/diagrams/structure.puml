@@ -1,0 +1,131 @@
+@startuml
+skinparam backgroundColor white
+skinparam defaultFontName SansSerif
+skinparam defaultFontSize 14
+skinparam shadowing false
+skinparam ArrowColor #355070
+skinparam classBackgroundColor #EEF4FA
+skinparam classBorderColor #355070
+!pragma layout smetana
+title Вариант 10 — структуры будущей Go-программы
+class Request <<struct>> {
+  ID: string
+  SourceID: int
+  GeneratedAt: float64
+  StartedAt: float64
+  FinishedAt: float64
+  RefusedAt: float64
+  Status: RequestStatus
+}
+class Source <<struct>> {
+  ID: int
+  MinInterval, MaxInterval: float64
+  Generate(now): Request
+  NextInterval(): float64
+}
+class Buffer <<struct>> {
+  Slots: []*Request
+  FirstFree(): int
+  Insert(slot, request)
+  Remove(id): Request
+  LowestPriorityOldest(): Request
+}
+class Device <<struct>> {
+  ID: int
+  ServiceRate: float64
+  Current: *Request
+  Start(request, now): Event
+  Finish(now): Request
+}
+class PlacementDispatcher <<struct>> {
+  Accept(request, now): PlacementResult
+}
+class SelectionDispatcher <<struct>> {
+  NextDevice: int
+  ActivePacket: *Packet
+  Dispatch(now): []Event
+  AssignDirect(request, now): Event
+  FormPacket()
+  FindFreeDevice(): *Device
+}
+class Packet <<struct>> {
+  SourceID: int
+  RemainingIDs: []string
+  Remove(id)
+  TakeNewest(): string
+}
+class Event <<struct>> {
+  Time: float64
+  Kind: EventKind
+  SourceID, DeviceID: int
+  RequestID: string
+  Serial: uint64
+}
+class EventCalendar <<struct>> {
+  Events: []Event
+  Push(event)
+  Pop(): Event
+}
+class Simulation <<struct>> {
+  Now: float64
+  Handle(event)
+  Step()
+  Run()
+}
+class Statistics <<struct>> {
+  Generated, Completed, Refused: []int
+  WaitSum, WaitSquareSum: []float64
+  ServiceSum, ServiceSquareSum: []float64
+  ResidenceSum: []float64
+  DeviceBusyTime: []float64
+  RecordArrival(request)
+  RecordStart(request, now)
+  RecordRefusal(request, now)
+  RecordCompletion(request, now)
+  Summary()
+}
+Simulation o-- Source
+Simulation o-- Device
+Simulation *-- EventCalendar
+Simulation *-- Buffer
+Simulation *-- PlacementDispatcher
+Simulation *-- SelectionDispatcher
+Simulation *-- Statistics
+Source ..> Request : создаёт
+Buffer o-- Request : ожидающие
+Device o-- Request : текущая, 0..1
+EventCalendar *-- Event
+PlacementDispatcher --> Buffer
+PlacementDispatcher --> SelectionDispatcher : делегирует назначение
+SelectionDispatcher --> Buffer
+SelectionDispatcher --> Device
+SelectionDispatcher *-- Packet
+Packet ..> Request : фиксирует ID
+enum EventKind {
+  Arrival
+  ServiceCompletion
+}
+enum RequestStatus {
+  Generated
+  Waiting
+  Processing
+  Completed
+  Refused
+}
+class PlacementResult <<struct>> {
+  Refused: *Request
+  Completion: *Event
+}
+Request --> RequestStatus
+Event --> EventKind
+PlacementDispatcher ..> PlacementResult
+note bottom of Simulation
+  События обрабатываются последовательно.
+  При одинаковом времени сначала выполняется
+  завершение обслуживания, затем поступление.
+end note
+note bottom of SelectionDispatcher
+  Д2Б5: фиксированный пакет одного источника.
+  Д2П2: поиск свободного прибора по кольцу.
+end note
+@enduml

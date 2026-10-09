@@ -1,0 +1,26 @@
+@startuml
+skinparam backgroundColor white
+skinparam defaultFontName SansSerif
+skinparam defaultFontSize 14
+skinparam shadowing false
+skinparam ArrowColor #355070
+skinparam classBackgroundColor #EEF4FA
+skinparam classBorderColor #355070
+!pragma layout smetana
+title Формализованная схема СМО — вариант 10
+rectangle "Источники И1, И2, И3\nИБ; ИЗ2: Uniform(a, b)" as I
+rectangle "Диспетчер постановки\nД1ОЗ3; Д1ОО2" as P
+rectangle "Буфер: B мест\nПервое свободное; без сдвига" as B
+rectangle "Диспетчер выбора\nД2Б5: фиксированный пакет\nД2П2: прибор по кольцу" as V
+rectangle "Приборы П1 … Пm\nПЗ1: Exp(μ)" as D
+rectangle "Выход: обслужено" as O
+rectangle "Выход: отказ" as R
+I --> P : новая заявка
+P --> B : ожидание
+B --> V : выбор из пакета
+P --> V : напрямую, если буфер пуст\nи прибор свободен
+V --> D : назначение
+D --> O : завершение
+P --> R : вытеснение из полного буфера\nпри занятости всех приборов
+note bottom of P : Среди ожидающих вытесняется заявка\nс максимальным номером источника;\nпри равенстве — самая старая.
+@enduml
